@@ -1,0 +1,41 @@
+The MIT License (MIT)
+
+Copyright (c) 2026 Globie Keeper contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+BRAND AND ASSETS ARE NOT COVERED BY THE MIT LICENCE
+
+The source code in this repository is open source under the MIT License above.
+The names, marks and visual assets are not.
+
+"Globie Keeper", "Globie AI", "Globie Earth" and the Globie Earth ecosystem
+names, together with the Globie logo, mascot characters and character artwork,
+product illustrations, and the globie.ai / keeper.globie.ai domain names, are
+copyright and trademark property of OpenmindProjects
+(https://OpenmindProjects.org). All rights reserved.
+
+You may run, modify and redistribute the code under the MIT License, but that
+licence grants no right to use these names, logos, mascot graphics or domains
+in a way that suggests endorsement by or affiliation with OpenmindProjects, or
+in any derivative product's own branding. Forks and derivative works must
+replace the Globie names, logo and mascot artwork with their own.
+

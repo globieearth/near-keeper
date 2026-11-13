@@ -1,0 +1,386 @@
+import { Link, router } from 'expo-router';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+
+import { GroupRow } from '@/components/groups/group-row';
+import { ShareRow } from '@/components/ledger/share-row';
+import { Button, IconButton } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { CurrencyPill } from '@/components/ui/currency-pill';
+import { CurrencySelect } from '@/components/ui/currency-select';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Field } from '@/components/ui/field';
+import { Icon, icon } from '@/components/ui/icon';
+import { BabyKaeNa } from '@/components/ui/mascot';
+import { useMascotToast } from '@/components/ui/mascot-toast';
+import { Screen } from '@/components/ui/screen';
+import { SectionHeading } from '@/components/ui/section';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Text } from '@/components/ui/text';
+import { colors, space } from '@/components/ui/theme';
+import { useMoney } from '@/lib/money-context';
+import { useCreateGroup, useJoinGroup, useMyGroups, useMyPoints, useMyShares } from '@/lib/queries';
+import { useSession } from '@/lib/session-context';
+
+const DEFAULT_CURRENCY = 'THB';
+
+/**
+ * What the group is for. It decides the default split and whether the group can
+ * hold several expenses at once (a trip or a rent tab can, a dinner cannot), so
+ * it is asked once at creation and stored on the group.
+ */
+const GROUP_KINDS = [
+  { value: 'meal', label: 'Food & drinks' },
+  { value: 'group_buy', label: 'Group buy' },
+  { value: 'groceries', label: 'Groceries' },
+  { value: 'rent', label: 'Rent' },
+  { value: 'utilities', label: 'Utilities' },
+  { value: 'trip', label: 'Trip' },
+  { value: 'subscription', label: 'Subscription' },
+  { value: 'event', label: 'Event' },
+  { value: 'gift', label: 'Gift' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export default function HomeScreen() {
+  const { session, signOut } = useSession();
+  const groups = useMyGroups();
+  const shares = useMyShares();
+  const points = useMyPoints();
+  const createGroup = useCreateGroup();
+  const joinGroup = useJoinGroup();
+  const notify = useMascotToast();
+  const money = useMoney();
+
+  const [groupName, setGroupName] = useState('');
+  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
+  const [kind, setKind] = useState<string>('meal');
+  const [inviteCode, setInviteCode] = useState('');
+
+  const openShares = (shares.data?.shares ?? []).filter(
+    (share) => share.status !== 'paid' && share.status !== 'settled'
+  );
+  const myGroups = groups.data?.groups ?? [];
+  const firstName = (session?.displayName ?? 'Friend').split(' ')[0];
+
+  // Confirmed lines the fronter has not locked yet: real money, not a share.
+  const pending = shares.data?.pending ?? [];
+
+  const owesMinor = shares.data?.outstandingMinor ?? 0;
+  const owesCurrency = shares.data?.currency ?? DEFAULT_CURRENCY;
+  // The hero may read in the member's own currency, but the amount they will be
+  // charged stays on screen beside it (§2.19).
+  const owesConverted =
+    money.displayCurrency !== null && money.displayCurrency !== owesCurrency;
+
+  async function onCreate() {
+    if (groupName.trim().length < 2) return;
+    const result = await createGroup.mutateAsync({
+      name: groupName.trim(),
+      currency,
+      kind,
+    });
+    setGroupName('');
+    notify({
+      title: 'Group opened',
+      body: `${result.group.name} is ready for everyone.`,
+    });
+    router.push({ pathname: '/groups/[id]', params: { id: result.group.id } });
+  }
+
+  async function onJoin() {
+    if (inviteCode.trim().length < 4) return;
+    const result = await joinGroup.mutateAsync({
+      inviteToken: inviteCode.trim(),
+      displayName: session?.displayName ?? '',
+    });
+    setInviteCode('');
+    notify({
+      title: 'You are in',
+      body: `${result.group.name} joined. Globie is keeping score.`,
+    });
+    router.push({ pathname: '/groups/[id]', params: { id: result.group.id } });
+  }
+
+  return (
+    <Screen
+      header={{
+        title: `Hey, ${firstName}`,
+        subtitle: 'Globie keeps every shared cost honest.',
+        action: (
+          <View style={styles.headerActions}>
+            <CurrencyPill />
+            <IconButton name={icon.logOut} label="Sign out" tone="muted" onPress={signOut} />
+          </View>
+        ),
+      }}
+    >
+      <Card tone="accent">
+        <View style={styles.heroRow}>
+          <View style={styles.heroCopy}>
+            <Text variant="label" tone="muted">
+              You owe
+            </Text>
+            <Text variant="figure">{money.format(owesMinor, owesCurrency)}</Text>
+            <Text variant="caption" tone="muted">
+              {owesConverted
+                ? `${money.formatOriginal(owesMinor, owesCurrency)} · `
+                : ''}
+              across {openShares.length} open {openShares.length === 1 ? 'share' : 'shares'}
+            </Text>
+            {pending.length > 0 ? (
+              <Text variant="caption" tone="warn">
+                {pending.length === 1
+                  ? `${money.format(pending[0]!.amountMinor, pending[0]!.currency)} confirmed — waiting for the fronter to lock the split`
+                  : `${pending.length} confirmed costs waiting for the fronter to lock the split`}
+              </Text>
+            ) : null}
+          </View>
+          <View style={styles.heroGlyph}>
+            <BabyKaeNa size={54} variant="badge" mood="cheer" label={null} />
+          </View>
+        </View>
+      </Card>
+
+      <View style={styles.tiles}>
+        <Stat
+          glyph={icon.hero}
+          mascot
+          label="Globie"
+          value={String(points.data?.balance ?? 0)}
+          hint="engagement points"
+        />
+        <Stat glyph={icon.receipt} label="Open" value={String(openShares.length)} hint="unsettled costs" />
+      </View>
+
+      {myGroups.length > 0 || groups.isLoading || groups.error ? (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text variant="title">Your groups</Text>
+            <Link href="/groups" asChild>
+              <Button variant="ghost" compact title="See all" icon={icon.chevronRight} iconSide="right" />
+            </Link>
+          </View>
+          {groups.isLoading ? (
+            <View style={styles.list} accessibilityElementsHidden>
+              <Skeleton height={62} />
+              <Skeleton height={62} />
+            </View>
+          ) : groups.error ? (
+            <Card>
+              <Text variant="label" tone="danger">
+                Could not load your groups
+              </Text>
+              <Text variant="caption" tone="muted">
+                {groups.error.message}
+              </Text>
+              <Button
+                variant="secondary"
+                compact
+                icon={icon.refresh}
+                title="Try again"
+                onPress={() => groups.refetch()}
+                style={styles.inline}
+              />
+            </Card>
+          ) : (
+            <View style={styles.list}>
+              {myGroups.slice(0, 3).map((group) => (
+                <GroupRow
+                  key={group.id}
+                  group={group}
+                  onPress={() =>
+                    router.push({ pathname: '/groups/[id]', params: { id: group.id } })
+                  }
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      ) : null}
+
+      <Card>
+        <SectionHeading
+          glyph={icon.people}
+          title="Start a group"
+          hint="Rent, groceries, a trip, a group buy: anything you share."
+        />
+        <Field
+          label="Group name"
+          value={groupName}
+          onChangeText={setGroupName}
+          placeholder="Bangkok flatmates"
+        />
+        <CurrencySelect
+          label="Currency"
+          value={currency}
+          onChange={setCurrency}
+          hint="Members are reimbursed in this currency."
+          error={createGroup.error?.message}
+        />
+        <View style={styles.kindBlock}>
+          <Text variant="label" tone="muted">
+            What is it for?
+          </Text>
+          <View style={styles.kindRow}>
+            {GROUP_KINDS.map((option) => (
+              <Button
+                key={option.value}
+                compact
+                variant={kind === option.value ? 'primary' : 'secondary'}
+                title={option.label}
+                onPress={() => setKind(option.value)}
+                accessibilityLabel={`Group type: ${option.label}`}
+              />
+            ))}
+          </View>
+        </View>
+        <Button
+          title="Create group"
+          icon={icon.add}
+          onPress={onCreate}
+          loading={createGroup.isPending}
+          disabled={groupName.trim().length < 2}
+        />
+      </Card>
+
+      <Card>
+        <SectionHeading glyph={icon.qr} title="Join with a code" hint="Got an invite from the fronter?" />
+        <Field
+          label="Invite code"
+          value={inviteCode}
+          onChangeText={setInviteCode}
+          placeholder="Paste the group code"
+          autoCapitalize="none"
+          error={joinGroup.error?.message}
+        />
+        <Button
+          title="Join group"
+          variant="secondary"
+          icon={icon.personAdd}
+          onPress={onJoin}
+          loading={joinGroup.isPending}
+          disabled={inviteCode.trim().length < 4}
+        />
+        <Button
+          title="Scan the QR code"
+          variant="ghost"
+          compact
+          icon={icon.scan}
+          onPress={() => router.push('/scan')}
+        />
+      </Card>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text variant="title">Open shares</Text>
+          <Link href="/me/shares" asChild>
+            <Button variant="ghost" compact title="See all" icon={icon.chevronRight} iconSide="right" />
+          </Link>
+        </View>
+        {shares.isLoading ? (
+          <View style={styles.list} accessibilityElementsHidden>
+            <Skeleton height={72} />
+            <Skeleton height={72} />
+          </View>
+        ) : shares.error ? (
+          <Card>
+            <Text variant="label" tone="danger">
+              Could not load your shares
+            </Text>
+            <Text variant="caption" tone="muted">
+              {shares.error.message}
+            </Text>
+            <Button
+              variant="secondary"
+              compact
+              icon={icon.refresh}
+              title="Try again"
+              onPress={() => shares.refetch()}
+              style={styles.inline}
+            />
+          </Card>
+        ) : openShares.length === 0 ? (
+          <EmptyState
+            icon={icon.checkCircle}
+            title="Nothing outstanding"
+            body="Front any shared cost and you take the Hero crown."
+          />
+        ) : (
+          <View style={styles.list}>
+            {openShares.slice(0, 4).map((share) => (
+              <ShareRow
+                key={share.id}
+                share={share}
+                onPress={() =>
+                  router.push({ pathname: '/groups/[id]', params: { id: share.groupId } })
+                }
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    </Screen>
+  );
+}
+
+function Stat({
+  glyph,
+  mascot = false,
+  label,
+  value,
+  hint,
+}: {
+  glyph: (typeof icon)[keyof typeof icon];
+  mascot?: boolean;
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <Card style={styles.tile}>
+      <View style={styles.tileTop}>
+        <Text variant="label" tone="muted">
+          {label}
+        </Text>
+        {mascot ? (
+          <BabyKaeNa size={22} variant="badge" sparkles={false} label={null} />
+        ) : (
+          <Icon name={glyph} size={16} color={colors.mutedDim} />
+        )}
+      </View>
+      <Text variant="title" tone="accent">
+        {value}
+      </Text>
+      <Text variant="caption" tone="dim">
+        {hint}
+      </Text>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  heroCopy: { flex: 1, gap: space.xs },
+  heroGlyph: {
+    width: 58,
+    height: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tiles: { flexDirection: 'row', gap: space.md },
+  tile: { flex: 1, gap: space.xs },
+  tileTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  section: { gap: space.md },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.md,
+  },
+  list: { gap: space.sm },
+  kindBlock: { gap: space.xs },
+  kindRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
+  inline: { alignSelf: 'flex-start' },
+});

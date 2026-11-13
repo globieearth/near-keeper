@@ -1,0 +1,84 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+# static site mounted into the web container by scripts/deploy.sh
+web-dist/
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# Windows / editors
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# TLS material for the proxy
+deploy/certs/
+deploy/tls/*.conf
+
+# local env files
+.env
+.env*.local
+
+# uploaded receipts and extracted frames
+server/var/
+
+# typescript
+*.tsbuildinfo
+
+# rust build output for the agreement registry contract (~1.3 GB locally)
+/contracts/agreements/target/
+
+# test / coverage output
+coverage/
+.nyc_output/
+*.log
+
+# EAS build artifacts
+*.apk
+*.aab
+*.ipa
+
+# local visual-review scratch (nested .gitignore also covers shots/)
+/.hallmark/
+/.screenshots/
+
+example
+
+# generated native folders
+/ios
+/android
+/DEV_PLAN.md
+/AGENTS.md
+/SUBMISSION.md
+/DEVPOST_SUBMISSION.md
+/PROJECT_MEMORY.md
