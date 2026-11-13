@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "main": "expo-router/entry",
   "private": true,
+  "funding": {
+    "type": "custom",
+    "url": "https://nearblocks.io/address/globieearth.near"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
