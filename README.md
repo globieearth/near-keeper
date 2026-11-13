@@ -6,7 +6,8 @@
 
 **Demo:** <https://near-keeper.globie.ai> · **Video:**
 [demo/globie-keeper-demo.mp4](demo/globie-keeper-demo.mp4) (2 min 41 s, every feature end to end)
-· **Tracks:** `social`, `realworld`, `business`
+· **Tracks:** `social`, `realworld`, `business` · **Support:**
+[`globieearth.near`](https://nearblocks.io/address/globieearth.near)
 
 ---
 
@@ -24,17 +25,14 @@ Globie Fund, the Sputnik DAO adapter, minting a DAO through the Sputnik factory,
 ours is deployed on another chain. The Expo shell, schema, receipt split and Globie agent carry over
 from the earlier build; the NEAR rail is what this window added.
 
-Money and billing are sensitive topics. Our proudest achievement is shipping a working product that
-clears those bottlenecks for our team and for anyone else who needs it, while preserving trust and
-keeping the relationships around it strong and positive.
-
 Stock, permissive libraries throughout — Expo, React Native, Fastify, React Query, pg-boss,
 PostgreSQL — no vendored template.
 
 Provenance follows [HACKATHON.md](https://nearhackathon.com/HACKATHON.md): Q-001 sets the window at
 the 19 Oct 2026 announcement; Q-002 covers the same concept entered on another chain, and the
-paragraph above names that entry; Q-003 wants the window's work reachable on its own — a dedicated
-branch, or a `pre-hackathon` → `hackathon-submission` tag pair with a link in this section.
+first paragraph of this section names that entry; Q-003 wants the window's work reachable on its own
+— a dedicated branch, or a `pre-hackathon` → `hackathon-submission` tag pair with a link in this
+section.
 
 ## Concept
 
@@ -60,6 +58,10 @@ database is never the proof — a transaction is.
 
 **Who it is for.** Small teams, flat shares, freelancers and friends: groups that already have a
 group chat and a person who keeps paying the bill.
+
+Money and billing are sensitive topics. Our proudest achievement is shipping a working product that
+clears those bottlenecks for our team and for anyone else who needs it, while preserving trust and
+keeping the relationships around it strong and positive.
 
 ---
 
