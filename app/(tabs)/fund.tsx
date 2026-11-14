@@ -1,4 +1,5 @@
 import * as WebBrowser from 'expo-web-browser';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -26,6 +27,7 @@ import {
     useFundCatalogue,
     useFundDeeds,
     useFxRates,
+    useMyProfile,
     useRequestFundQuote,
     useSettleFundDeed
 } from '@/lib/queries';
@@ -198,6 +200,10 @@ export default function FundScreen() {
   const giving = useFundDeeds();
   const requestQuote = useRequestFundQuote();
   const settleDeed = useSettleFundDeed();
+  // The wallet signs as the account linked here; that is not always the account
+  // selected inside the wallet, and the difference is the failure people hit.
+  const profile = useMyProfile();
+  const nearAccount = profile.data?.nearAccount ?? null;
   // The NEAR spot row only rides on the USD table (`server/src/lib/fx.ts`).
   const fx = useFxRates('USD');
   const notify = useMascotToast();
@@ -388,20 +394,6 @@ export default function FundScreen() {
         </Card>
       ) : null}
 
-      {error ? (
-        <View accessibilityLiveRegion="polite" style={styles.errorBox}>
-          <View style={styles.errorHead}>
-            <Icon name={icon.warning} size={16} color={colors.danger} />
-            <Text variant="label" tone="danger">
-              {headline(error)}
-            </Text>
-          </View>
-          <Text variant="caption" tone="danger">
-            {error.message}
-          </Text>
-        </View>
-      ) : null}
-
       <SectionHeading
         glyph={icon.leaf}
         title="Who to adopt"
@@ -511,6 +503,39 @@ export default function FundScreen() {
                 </Text>
               )}
             </View>
+
+            {error ? (
+              <View accessibilityLiveRegion="polite" style={styles.errorBox}>
+                <View style={styles.errorHead}>
+                  <Icon name={icon.warning} size={16} color={colors.danger} />
+                  <Text variant="label" tone="danger">
+                    {headline(error)}
+                  </Text>
+                </View>
+                <Text variant="caption" tone="danger">
+                  {error.message}
+                </Text>
+              </View>
+            ) : null}
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                nearAccount
+                  ? `Signing as ${nearAccount}. Change the account in settings.`
+                  : 'No NEAR account linked. Link one in settings.'
+              }
+              onPress={() => router.push('/settings')}
+              style={styles.signerRow}
+            >
+              <Icon name={icon.personOutline} size={14} color={colors.muted} />
+              <Text variant="caption" tone="muted" numberOfLines={1} style={styles.flex}>
+                {nearAccount ? `Signing as ${nearAccount}` : 'No NEAR account linked yet'}
+              </Text>
+              <Text variant="caption" tone="accent">
+                {nearAccount ? 'change' : 'link'}
+              </Text>
+            </Pressable>
 
             <Button
               title={`Donate ${draftLabel}`}
@@ -624,6 +649,12 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   heroCopy: { flex: 1, gap: space.xs },
   draftRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  signerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    paddingVertical: space.xs,
+  },
   heroGlyph: {
     width: 58,
     height: 58,

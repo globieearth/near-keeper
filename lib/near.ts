@@ -147,6 +147,18 @@ export const METEOR_POLL_MS = 450;
 const METEOR_POPUP_WIDTH = 390;
 const METEOR_POPUP_HEIGHT = 650;
 
+/**
+ * How long we keep a wallet window open without a verdict before giving up.
+ *
+ * Meteor answers `closed_success` or `closed_fail` for most outcomes, but not
+ * all: when it has no key for the account the transaction names it renders
+ * "Account not found" as a toast inside the popup and posts nothing back. The
+ * opener is cross-origin and cannot read that toast, so silence is the only
+ * signal that failure leaves. Long enough that a considered approval still
+ * counts; short enough that nobody watches a spinner indefinitely.
+ */
+export const METEOR_ANSWER_TIMEOUT_MS = 120_000;
+
 export const POPUP_BLOCKED =
   'The wallet window was blocked. Allow pop-ups for this site and try again.';
 
@@ -158,6 +170,20 @@ export const METEOR_FAILURES: Record<string, string> = {
   POPUP_WINDOW_OPEN_FAILED: POPUP_BLOCKED,
   POPUP_WINDOW_REFUSED: POPUP_BLOCKED,
 };
+
+/**
+ * The wallet signs as whichever account is selected *inside it*, which is not
+ * necessarily the account the API prepared the transaction for. When those
+ * differ the wallet holds no key for the signer and answers "Account not
+ * found" — a true statement, but not one that tells the person what to do.
+ */
+export function walletAccountMessage(signerId?: string | null): string {
+  const who = signerId ?? 'the account linked to your Globie profile';
+  return (
+    `This wallet cannot sign as ${who}. Switch the wallet to ${who}, or set the ` +
+    'account this wallet holds as your NEAR account in Settings, then try again.'
+  );
+}
 
 /** Target origin for `postMessage`; anything else is ignored by the wallet. */
 export function walletOrigin(walletUrl: string = NEAR_WALLET_URL): string {
@@ -212,9 +238,22 @@ export function runMeteorAction<T>(params: {
   extract: (payload: MeteorPayload) => T | Promise<T>;
   /** Shown when the wallet fails without an `endTag` we can explain. */
   failureMessage?: string;
+  /**
+   * The account the prepared transaction names. Only used to explain an
+   * account-level failure; the wallet picks the signer, not us.
+   */
+  signerId?: string | null;
 }): Promise<MeteorOutcome<T>> {
   const fallback =
-    params.failureMessage ?? 'The wallet did not complete the request. Please try again.';
+    params.failureMessage ??
+    (params.signerId
+      ? `The wallet did not complete the request. Check that it is switched to ${params.signerId}, then try again.`
+      : 'The wallet did not complete the request. Please try again.');
+  const silent = params.signerId
+    ? `The wallet never answered. If it showed “Account not found”, it cannot sign as ` +
+      `${params.signerId}: switch the wallet to that account, or set the account it ` +
+      'holds as your NEAR account in Settings.'
+    : 'The wallet never answered. Close its window and try again.';
   const uid = newConnectionUid();
   const origin = walletOrigin();
   const popup = window.open(
@@ -226,12 +265,17 @@ export function runMeteorAction<T>(params: {
 
   return new Promise<MeteorOutcome<T>>((resolve) => {
     let timer: ReturnType<typeof setInterval> | null = null;
+    let watchdog: ReturnType<typeof setTimeout> | null = null;
     let settled = false;
 
     const clear = () => {
       if (timer !== null) {
         clearInterval(timer);
         timer = null;
+      }
+      if (watchdog !== null) {
+        clearTimeout(watchdog);
+        watchdog = null;
       }
       window.removeEventListener('message', onMessage);
     };
@@ -240,6 +284,20 @@ export function runMeteorAction<T>(params: {
       if (settled) return;
       settled = true;
       clear();
+      // The wallet listens for our verdict and closes its own window when it
+      // hears one — the only way to dismiss a popup that decided to stay.
+      try {
+        popup.postMessage(
+          {
+            uid,
+            status: outcome.status === 'success' ? 'closed_success' : 'closed_fail',
+            endTags: [],
+          },
+          origin
+        );
+      } catch {
+        // Cross-origin handle gone; the close below covers it.
+      }
       try {
         popup.close();
       } catch {
@@ -280,7 +338,16 @@ export function runMeteorAction<T>(params: {
         if (tag === 'USER_CANCELLED' || tag === 'WINDOW_CLOSED') {
           settle({ status: 'cancelled' });
         } else {
-          settle({ status: 'error', message: METEOR_FAILURES[tag] ?? fallback });
+          // Meteor's account failures are not all in the table above, and the
+          // one people hit ("Account not found") is the signer mismatch — the
+          // wallet has no key for the account we built the transaction for.
+          const accountFailure = /ACCOUNT|NOT_FOUND/i.test(tags.join(' '));
+          const message =
+            METEOR_FAILURES[tag] ??
+            (accountFailure && params.signerId
+              ? walletAccountMessage(params.signerId)
+              : fallback);
+          settle({ status: 'error', message });
         }
       }
     }
@@ -308,6 +375,7 @@ export function runMeteorAction<T>(params: {
     window.addEventListener('message', onMessage);
     send();
     timer = setInterval(send, METEOR_POLL_MS);
+    watchdog = setTimeout(() => settle({ status: 'error', message: silent }), METEOR_ANSWER_TIMEOUT_MS);
   });
 }
 
@@ -358,12 +426,21 @@ export async function signAgreementTerms(input: {
  * anchors so both report the same way: a receipt id, or a cancel, or a message
  * the caller can show.
  */
-async function signMeteorTransaction(transaction: string): Promise<NearPayOutcome> {
+async function signMeteorTransaction(
+  transaction: string,
+  signerId?: string | null
+): Promise<NearPayOutcome> {
   const outcome = await runMeteorAction<string>({
     actionType: METEOR_SIGN,
     // Meteor takes transactions as a comma-joined list of base64 strings.
     inputs: { transactions: transaction },
+    signerId,
     extract: (payload) => {
+      // The wallet reports which account it signed with. If that is not the
+      // signer the transaction names, the chain would reject it — say so here.
+      if (signerId && payload.accountId && payload.accountId !== signerId) {
+        throw new Error(walletAccountMessage(signerId));
+      }
       const id = payload.executionOutcomes?.[0]?.transaction_outcome?.id;
       if (!id) {
         throw new Error(
@@ -390,10 +467,12 @@ export async function payNearTransfer(input: {
   /** Set when paying from a pay link, so the API checks the wallet owes it. */
   shareId?: string;
 }): Promise<NearPayOutcome> {
+  let signerId: string | null = null;
   let transaction: string;
   try {
     const prepared = await prepareNearFtTransfer(input);
     transaction = prepared.transaction;
+    signerId = prepared.signerId;
   } catch (cause) {
     return {
       status: 'error',
@@ -401,7 +480,7 @@ export async function payNearTransfer(input: {
     };
   }
 
-  return signMeteorTransaction(transaction);
+  return signMeteorTransaction(transaction, signerId);
 }
 
 /**
@@ -413,10 +492,12 @@ export async function payNearNativeTransfer(input: {
   receiverId: string;
   deposit: string;
 }): Promise<NearPayOutcome> {
+  let signerId: string | null = null;
   let transaction: string;
   try {
     const prepared = await prepareNearNativeTransfer(input);
     transaction = prepared.transaction;
+    signerId = prepared.signerId;
   } catch (cause) {
     return {
       status: 'error',
@@ -424,7 +505,7 @@ export async function payNearNativeTransfer(input: {
     };
   }
 
-  return signMeteorTransaction(transaction);
+  return signMeteorTransaction(transaction, signerId);
 }
 
 /**
@@ -436,10 +517,12 @@ export async function payNearNativeTransfer(input: {
 export async function payNearRecordAcceptance(input: {
   agreementId: string;
 }): Promise<NearPayOutcome> {
+  let signerId: string | null = null;
   let transaction: string;
   try {
     const prepared = await prepareNearRecordAcceptance(input.agreementId);
     transaction = prepared.transaction;
+    signerId = prepared.signerId;
   } catch (cause) {
     return {
       status: 'error',
@@ -448,7 +531,7 @@ export async function payNearRecordAcceptance(input: {
     };
   }
 
-  return signMeteorTransaction(transaction);
+  return signMeteorTransaction(transaction, signerId);
 }
 
 /**
@@ -460,10 +543,12 @@ export async function payNearRecordAcceptance(input: {
 export async function payNearAnchorCall(input: {
   agreementId: string;
 }): Promise<NearPayOutcome> {
+  let signerId: string | null = null;
   let transaction: string;
   try {
     const prepared = await prepareNearAnchorCall(input.agreementId);
     transaction = prepared.transaction;
+    signerId = prepared.signerId;
   } catch (cause) {
     return {
       status: 'error',
@@ -471,7 +556,7 @@ export async function payNearAnchorCall(input: {
     };
   }
 
-  return signMeteorTransaction(transaction);
+  return signMeteorTransaction(transaction, signerId);
 }
 
 /**

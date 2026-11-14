@@ -100,11 +100,16 @@ async function loadProject(db: Db, projectId: string): Promise<ProjectRow> {
   return row;
 }
 
-/** The donor's own linked wallet — a group subaccount is irrelevant here. */
+/**
+ * The donor's own linked wallet — a group subaccount is irrelevant here.
+ *
+ * `near_verified` is deliberately not required: typing an account in Settings
+ * cannot prove ownership, and settlement reads the sender back from RPC, so the
+ * chain decides. A successful deed also flips the flag (see `settleFundDeed`).
+ */
 async function loadDonorAccount(userId: string): Promise<string | null> {
   const { rows } = await query<{ near_account: string | null }>(
-    `select case when near_verified then near_account end as near_account
-       from users where id = $1`,
+    `select near_account from users where id = $1`,
     [userId],
   );
   return rows[0]?.near_account ?? null;
@@ -493,6 +498,16 @@ export async function settleFundDeed(
 
     const row = rows[0];
     if (!row) throw new Error('fund deed insert returned no row');
+
+    // `verifyTransfer` just proved this account sent the money into the
+    // sanctuary, which is exactly the proof a Settings link could not give.
+    await tx.query(
+      `update users
+          set near_verified = true
+        where id = $1 and near_account = $2 and not near_verified`,
+      [quote.user_id, quote.payer_account],
+    );
+
     return { row, created: true };
   });
 
