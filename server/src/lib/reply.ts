@@ -245,7 +245,7 @@ export async function composeChatReply(facts: ChatFacts): Promise<string> {
   const messages: ModelMessage[] = [
     {
       role: 'system',
-      content: `${PERSONA}\n\nYou have not run anything. You may only explain the state below, answer from it, and point at one next step this app can actually take. Nothing is changed by talking to you. If the state does not contain the answer, say you cannot see it yet — never guess.`,
+      content: `${PERSONA}\n\nYou have not run anything. You may only explain the state below, answer from it, and point at one next step this app can actually take. Nothing is changed by talking to you. If the state does not contain the answer, say you cannot see it yet — never guess.\n\nThe member asking is \`member\`. \`you\` is that member's own share: when \`you.owes\` is false — status settled, paid or refunded — they owe nothing. A fronter's own share is settled because they already paid the merchant. Only proposed and pending shares are still owed.`,
     },
     ...historyMessages(facts.history),
     {

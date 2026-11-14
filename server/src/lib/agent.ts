@@ -1035,6 +1035,7 @@ export async function runAgentChat(input: {
       (row) => !['paid', 'settled', 'refunded'].includes(row.status),
     );
     const outstandingMinor = outstanding.reduce((sum, row) => sum + row.amount, 0);
+    const mine = shares.find((row) => row.member_id === ctx.member.id);
 
     state = {
       currency,
@@ -1054,6 +1055,17 @@ export async function runAgentChat(input: {
         amount: `${formatAmount(row.amount, currency)} ${currency}`,
         status: row.status,
       })),
+      // The member's own share, stated explicitly: without it the model has to
+      // match `member` back to the asker and reads a settled fronter share as
+      // money still owed.
+      you: mine
+        ? {
+            share: `${formatAmount(mine.amount, currency)} ${currency}`,
+            status: mine.status,
+            owes: !['paid', 'settled', 'refunded'].includes(mine.status),
+            fronter: ctx.member.id === ctx.frontedBy,
+          }
+        : null,
     };
   } else if (input.agreementId) {
     const ctx = await requireAgreementMember(input.request, input.agreementId);
@@ -1134,6 +1146,15 @@ export async function runAgentChat(input: {
         )} ${currency}`,
         members: outstanding.map((share) => share.member_name),
       };
+      const mine = shares.find((share) => share.member_id === ctx.member.id);
+      state.you = mine
+        ? {
+            share: `${formatAmount(mine.amount, currency)} ${currency}`,
+            status: mine.status,
+            owes: !['paid', 'settled', 'refunded'].includes(mine.status),
+            fronter: ctx.member.id === ctx.frontedBy,
+          }
+        : null;
     }
   }
 
