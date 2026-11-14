@@ -37,6 +37,7 @@ import {
   proposalBondYocto,
   type RoleRequirement,
   type SputnikPolicy,
+  type SputnikProposal,
 } from './sputnik.js';
 
 const RATE_SCALE = 1_000_000_000_000n;
@@ -1502,6 +1503,111 @@ const FAILED_PROPOSAL_STATES = new Set([
   'Cancelled',
 ]);
 
+const FT_TRANSFER_METHOD = 'ft_transfer';
+
+type ProposalKindView = {
+  Transfer?: { receiver_id?: unknown; amount?: unknown };
+  FunctionCall?: {
+    actions?: { method_name?: unknown; args?: unknown }[];
+  };
+};
+
+/** The `args` of a Sputnik action are base64 JSON, so a bad blob proves nothing. */
+function decodeActionArgs(raw: unknown): Record<string, unknown> | null {
+  if (typeof raw !== 'string') return null;
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Amounts arrive as decimal strings; anything else cannot equal a base-unit row. */
+function chainAmountArg(raw: unknown): bigint | null {
+  return typeof raw === 'string' && /^\d+$/.test(raw) ? BigInt(raw) : null;
+}
+
+/**
+ * The DAO executes whatever the wallet submitted, so an `executed` status alone
+ * does not say *what* was paid. Only a proposal naming the row's recipient for
+ * the row's exact base units may settle it: a native `Transfer` pays
+ * `receiver_id`/`amount`, an NEP-141 `ft_transfer` names the contract as the
+ * call target and the contributor inside `args`.
+ */
+function assertPayoutMatchesProposal(payout: PayoutRow, proposal: SputnikProposal): void {
+  const kind = (proposal.kind ?? null) as ProposalKindView | null;
+  if (!kind || typeof kind !== 'object') {
+    throw ApiError.conflict(
+      'payout_proposal_mismatch',
+      'That proposal carries no action, so it cannot be the payout we prepared',
+    );
+  }
+
+  const expectedChainAmount = BigInt(payout.chain_amount);
+
+  if (kind.Transfer) {
+    const receiver = kind.Transfer.receiver_id;
+    if (receiver !== payout.recipient_account) {
+      throw ApiError.conflict(
+        'payout_proposal_wrong_receiver',
+        `That proposal pays ${
+          typeof receiver === 'string' ? receiver : 'an unknown account'
+        }, not ${payout.recipient_account}`,
+      );
+    }
+    const amount = kind.Transfer.amount;
+    if (chainAmountArg(amount) !== expectedChainAmount) {
+      throw ApiError.conflict(
+        'payout_proposal_wrong_amount',
+        `That proposal moves ${
+          typeof amount === 'string' ? amount : 'an unknown amount'
+        } base units, not ${payout.chain_amount}`,
+      );
+    }
+    return;
+  }
+
+  if (kind.FunctionCall) {
+    const action = kind.FunctionCall.actions?.[0];
+    const method = typeof action?.method_name === 'string' ? action.method_name : null;
+    if (!action || method !== FT_TRANSFER_METHOD) {
+      throw ApiError.conflict(
+        'payout_proposal_wrong_method',
+        `That proposal calls ${method ?? 'nothing'}, not ${FT_TRANSFER_METHOD}`,
+      );
+    }
+
+    const args = decodeActionArgs(action.args);
+    const receiver = args?.receiver_id;
+    if (receiver !== payout.recipient_account) {
+      throw ApiError.conflict(
+        'payout_proposal_wrong_receiver',
+        `That proposal pays ${
+          typeof receiver === 'string' ? receiver : 'an unknown account'
+        }, not ${payout.recipient_account}`,
+      );
+    }
+    const amount = args?.amount;
+    if (chainAmountArg(amount) !== expectedChainAmount) {
+      throw ApiError.conflict(
+        'payout_proposal_wrong_amount',
+        `That proposal moves ${
+          typeof amount === 'string' ? amount : 'an unknown amount'
+        } base units, not ${payout.chain_amount}`,
+      );
+    }
+    return;
+  }
+
+  throw ApiError.conflict(
+    'payout_proposal_mismatch',
+    'That proposal is not a transfer this payout can settle',
+  );
+}
+
 /**
  * Reads `get_proposal` and settles the row. Executing recomputes the
  * contributor's trust in the same transaction as the status change.
@@ -1539,6 +1645,9 @@ export async function syncPayout(payoutId: string): Promise<PayoutView> {
   }
 
   if (next === 'executed') {
+    // The DAO executed *a* proposal; make sure it is the one we prepared.
+    assertPayoutMatchesProposal(payout, proposal);
+
     await withTransaction(async (tx) => {
       await tx.query('select id from bounty_payouts where id = $1 for update', [payoutId]);
       const current = await loadPayoutRow(tx, payoutId);

@@ -619,6 +619,19 @@ const getBillStatus: ToolHandler = async (request, args) => {
   const openInterest = interest.filter((row) => row.status === 'requested');
   const openInterestMinor = openInterest.reduce((sum, row) => sum + row.amount, 0);
   const currency = bill.currency.trim();
+  // The asker's own share, stated explicitly: "outstanding" is the group total,
+  // so without this a fronter's settled share reads back as money they owe.
+  const mine = shares.find((row) => row.member_id === ctx.member.id);
+  const mineOwes = mine
+    ? !['paid', 'settled', 'refunded'].includes(mine.status)
+    : false;
+  const own = !mine
+    ? ''
+    : mineOwes
+      ? ` Your own share is ${formatAmount(mine.amount, currency)} ${currency}, still ${mine.status}.`
+      : ctx.member.id === ctx.frontedBy
+        ? ` You owe nothing — you fronted it, so your own share is ${mine.status}.`
+        : ` You owe nothing — your share is ${mine.status}.`;
 
   const lateFees =
     openInterest.length === 0
@@ -652,13 +665,21 @@ const getBillStatus: ToolHandler = async (request, args) => {
         amountMinor: openInterestMinor,
         chargeIds: openInterest.map((row) => row.id),
       },
+      you: mine
+        ? {
+            share: `${formatAmount(mine.amount, currency)} ${currency}`,
+            status: mine.status,
+            owes: mineOwes,
+            fronter: ctx.member.id === ctx.frontedBy,
+          }
+        : null,
     },
     reply:
       outstanding.length === 0
-        ? `Everyone has paid — this bill is settled.${lateFees}`
+        ? `Everyone has paid — this bill is settled.${own}${lateFees}`
         : `${outstanding.length} share${
             outstanding.length === 1 ? '' : 's'
-          } still open: ${formatAmount(outstandingMinor, currency)} ${currency} outstanding.${lateFees}`,
+          } still open: ${formatAmount(outstandingMinor, currency)} ${currency} outstanding.${own}${lateFees}`,
   };
 };
 
