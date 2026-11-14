@@ -248,7 +248,7 @@ links back to the board.
 
 ## Demo
 
-The recording is [demo/globie-keeper-demo.mp4](demo/globie-keeper-demo.mp4) — **137 s, 720×1746,
+The recording is [demo/globie-keeper-demo.mp4](demo/globie-keeper-demo.mp4) — **138 s, 720×1746,
 30 fps**, a portrait phone view with burned-in beat captions. It was captured from one live browser
 session against the testnet deployment over the Chrome DevTools Protocol, so every number on screen
 came from the API; a title card, the captions and a recap card were added in editing.
@@ -259,17 +259,18 @@ came from the API; a title card, the captions and a recap card were added in edi
 | 0:03 | Home as `globie-alice-61576.testnet` — what you owe, what's open, 15 Globie — then *Start a group* (name, THB, tags) and *Join with a code* |
 | 0:15 | *Dinner at Somtam House*: invite `DFMBDE` + QR, 4 members, agreement `≈ $30.14 / THB 1,020.00`, 3 of 4 accepted |
 | 0:29 | **Split vote** as Chai: `By line item · 3` / `Evenly · 0`, one vote per member, majority wins — `Vote counted` |
-| 0:38 | **Ask Globie**: "who still owes?" runs a live tool call, a typed follow-up gets an answer, then *Nudge the late payer* → Confirm |
-| 1:05 | **Globie points and the leaderboard** over 30 days — Alice Hero 15 Globie (≈ $30.14 fronted), Ben 10, Chai 0, calmdish 0 |
-| 1:13 | **The bill**: 5 line items, per-item shares, `Request on NEAR` with the frozen USDC quote |
-| 1:23 | **Activity**: every event on one timeline; `Verified on chain` expands to the full transaction hash |
-| 1:30 | **Globie Fund**: adopt a Yang Na for $5.00, deed `GLB-2026-000004` |
-| 1:43 | **The whole manual lives in-app**: what Globie can and cannot do, WalletConnect, group rules, security |
-| 1:48 | **Settings**: NEAR account linked and `Verified on NEAR`, keys stay on the device |
-| 1:53 | **Group DAO**: live Sputnik `globie-dao-test.testnet`, treasury, spend caps (`≈ $15.15 / ≈ $74 / ≈ $2.95`), policy `114/7/2026`, bounty board |
+| 0:41 | **Ask Globie**: "who still owes?" runs a live tool call — `Chai still owes 320.00 THB. Your share is settled since you fronted the cost.` A typed "how much do I owe?" answers `You owe nothing. Your share is settled. Chai owes 320.00 THB.`, then *Nudge the late payer* → Confirm → reminder sent |
+| 1:07 | Back on *Dinner at Somtam House* — who is in, the agreement and the group chat |
+| 1:12 | **Globie points and the leaderboard** over 30 days — Alice Hero 15 Globie (≈ $30.14 fronted), Ben 10, Chai 0, calmdish 0 |
+| 1:18 | **The bill**: 5 line items, per-item shares, `Request on NEAR` with the frozen USDC quote |
+| 1:26 | **Activity**: every event on one timeline; `Verified on chain` expands to the full transaction hash |
+| 1:32 | **Globie Fund**: adopt a Yang Na for $5.00, deed `GLB-2026-000004` |
+| 1:46 | **The whole manual lives in-app**: what Globie can and cannot do, WalletConnect, group rules, security |
+| 1:50 | **Settings**: NEAR account linked and `Verified on NEAR`, keys stay on the device |
+| 1:54 | **Group DAO**: live Sputnik `globie-dao-test.testnet`, treasury, spend caps (`≈ $15.15 / ≈ $74 / ≈ $2.95`), policy `114/7/2026`, bounty board |
 | 1:58 | **Bounty claim**: 1,200.00 THB bounty at 10.1846 NEAR, agreement `#7cf2f215`, status → *Claimed · Waiting for the council* |
-| 2:04 | **Shares as Chai**: outstanding `≈ $9.46 / THB 320.00`, one tap to `Pay 9.46 USDC` |
-| 2:13 | Recap: one group, one dinner, one real payout trail |
+| 2:05 | **Shares as Chai**: outstanding `≈ $9.46 / THB 320.00`, one tap to `Pay 9.46 USDC` |
+| 2:16 | Recap: one group, one dinner, one real payout trail |
 
 ### Testnet accounts used in the demo
 
