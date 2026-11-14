@@ -5,7 +5,7 @@
 > server never holds the money.
 
 **Demo:** <https://near-keeper.globie.ai> · **Video:**
-[demo/globie-keeper-demo.mp4](demo/globie-keeper-demo.mp4) (2 min 41 s, every feature end to end)
+[demo/globie-keeper-demo.mp4](demo/globie-keeper-demo.mp4) (2 min 17 s, 15 beats end to end)
 · **Tracks:** `social`, `realworld`, `business` · **Support:**
 [`globieearth.near`](https://nearblocks.io/address/globieearth.near)
 
@@ -248,43 +248,45 @@ links back to the board.
 
 ## Demo
 
-The recording is [demo/globie-keeper-demo.mp4](demo/globie-keeper-demo.mp4) — **161 s, 1440×900,
-30 fps**. It was captured from one live browser session against the testnet deployment over the
-Chrome DevTools Protocol, so every number on screen came from the API; a title card, beat captions
-and a recap card were added in editing.
+The recording is [demo/globie-keeper-demo.mp4](demo/globie-keeper-demo.mp4) — **137 s, 720×1746,
+30 fps**, a portrait phone view with burned-in beat captions. It was captured from one live browser
+session against the testnet deployment over the Chrome DevTools Protocol, so every number on screen
+came from the API; a title card, the captions and a recap card were added in editing.
 
 | Time | What is shown |
 |---|---|
-| 0:00 | Sign in with a NEAR wallet — no password, no email |
-| 0:21 | The in-app manual, including what Globie can and cannot do |
-| 0:26 | **Real NEP-413 login** as `globie-alice-61576.testnet` |
-| 0:33 | Home: what you owe, what you fronted, what you are owed |
-| 0:40 | Groups → *Dinner at Somtam House*, invite `DFMBDE`, 3 members, THB 1,020.00 |
-| 0:52 | **Ask Globie**: a live tool call answers who still owes, then a free-text follow-up |
-| 1:05 | The bill: THB 1,020.00 over 5 lines, locked by the fronter |
-| 1:12 | **Request on NEAR**: frozen USDC quote, payee and memo per share |
-| 1:19 | Activity: Ben reimbursed 320.00 THB = 9.46 USDC, verified on chain |
-| 1:24 | The payer's pay link, showing `Verified on chain` |
-| 1:37 | **One-tap pay page**: `Pay 9.46 USDC`, signed as `globie-chai-61576.testnet` |
-| 1:58 | **Globie Fund**: adopt a tree, deed `GLB-2026-000004`, $5.00 |
-| 2:17 | **Group DAO**: live Sputnik DAO, bounty board, executed payout |
-| 2:24 | Bounty history: 1.412269800025 NEAR, Full DAO vote, proposal 1 |
-| 2:33 | Recap of the five artefacts: group, bill, share, deed, payout |
+| 0:00 | Title card: split votes, bills and shares, Globie AI, the DAO, the Fund |
+| 0:03 | Home as `globie-alice-61576.testnet` — what you owe, what's open, 15 Globie — then *Start a group* (name, THB, tags) and *Join with a code* |
+| 0:15 | *Dinner at Somtam House*: invite `DFMBDE` + QR, 4 members, agreement `≈ $30.14 / THB 1,020.00`, 3 of 4 accepted |
+| 0:29 | **Split vote** as Chai: `By line item · 3` / `Evenly · 0`, one vote per member, majority wins — `Vote counted` |
+| 0:38 | **Ask Globie**: "who still owes?" runs a live tool call, a typed follow-up gets an answer, then *Nudge the late payer* → Confirm |
+| 1:05 | **Globie points and the leaderboard** over 30 days — Alice Hero 15 Globie (≈ $30.14 fronted), Ben 10, Chai 0, calmdish 0 |
+| 1:13 | **The bill**: 5 line items, per-item shares, `Request on NEAR` with the frozen USDC quote |
+| 1:23 | **Activity**: every event on one timeline; `Verified on chain` expands to the full transaction hash |
+| 1:30 | **Globie Fund**: adopt a Yang Na for $5.00, deed `GLB-2026-000004` |
+| 1:43 | **The whole manual lives in-app**: what Globie can and cannot do, WalletConnect, group rules, security |
+| 1:48 | **Settings**: NEAR account linked and `Verified on NEAR`, keys stay on the device |
+| 1:53 | **Group DAO**: live Sputnik `globie-dao-test.testnet`, treasury, spend caps (`≈ $15.15 / ≈ $74 / ≈ $2.95`), policy `114/7/2026`, bounty board |
+| 1:58 | **Bounty claim**: 1,200.00 THB bounty at 10.1846 NEAR, agreement `#7cf2f215`, status → *Claimed · Waiting for the council* |
+| 2:04 | **Shares as Chai**: outstanding `≈ $9.46 / THB 320.00`, one tap to `Pay 9.46 USDC` |
+| 2:13 | Recap: one group, one dinner, one real payout trail |
 
 ### Testnet accounts used in the demo
 
-Three accounts under our control, created and funded for this recording. Every balance below is a
+Four accounts under our control, created and funded for this recording. Every balance below is a
 finality-`final` RPC read, not a mock.
 
 | Account | Role | NEAR | USDC |
 |---|---|---|---|
 | `globie-alice-61576.testnet` | fronts the dinner, receives the USDC | 9.9994 | 24.46 |
-| `globie-chai-61576.testnet` | owes a share, signs the one-tap payment | 10.0000 | 20.00 |
+| `globie-chai-61576.testnet` | votes on the split, owes the outstanding share | 10.0000 | 20.00 |
 | `globie-ben-61576.testnet` | reimburses their share, then donates to the Fund | 9.9997 | 10.54 |
+| `calmdish4898.testnet` | fourth member, joins by code | — | — |
 
-The balances reconcile with the recorded events: Alice spent 5 USDC at the Fund and received 9.46
-from Ben; Ben started at 20 and sent 9.46; Chai's 20 is untouched, because Chai's share is the one
-left outstanding on purpose, to show the pay link on a share that is still due.
+`calmdish4898.testnet` is a real account in the group but moves no money in this cut, so it carries
+no balance row. The three that do transact reconcile with the recorded events: Alice spent 5 USDC at
+the Fund and received 9.46 from Ben; Ben started at 20 and sent 9.46; Chai's 20 is untouched, because
+Chai's share is the one left outstanding on purpose — the cut ends on that pay button.
 
 ### Transactions to check
 
@@ -299,7 +301,8 @@ browsers refuse popups opened from a scripted origin; the on-chain legs were sig
 the same accounts and the pay page carries that beat on screen. And the recording predates in-app DAO
 minting: the hosted demo has since been redeployed with it, so a group that has no treasury yet now
 offers a *Create a DAO with defaults* card the video does not show — the bounty and payout beats are
-unchanged.
+unchanged. The bounty beat in this cut stops at *Claimed · Waiting for the council*; the executed
+payout is the one in the transaction table above.
 
 ---
 
