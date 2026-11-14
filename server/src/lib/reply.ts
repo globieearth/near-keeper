@@ -207,6 +207,7 @@ function chatFallback(facts: ChatFacts): string {
     bill?: { label?: string; status?: string } | null;
     agreement?: { status?: string; accepted?: string; frontedBy?: string | null } | null;
     outstanding?: { count?: number };
+    you?: { share?: string; status?: string; owes?: boolean; fronter?: boolean } | null;
   };
   const bill = state.bill;
   if (!bill) {
@@ -223,12 +224,22 @@ function chatFallback(facts: ChatFacts): string {
   }
   const label = bill.label ?? 'the expense';
   const open = state.outstanding?.count ?? 0;
+  // "How much do I owe?" is answered from the asker's own row, not the tally:
+  // a fronter's share is settled, so a fronter owes nothing.
+  const you = state.you;
+  const own = !you
+    ? ''
+    : you.owes === false
+      ? you.fronter
+        ? ` You owe nothing — you fronted it, so your own share is ${you.status}.`
+        : ` You owe nothing — your share is ${you.status}.`
+      : ` Your own share is ${you.share}, still ${you.status}.`;
   if (open > 0) {
     return `${first}, ${label} is ${statusWord(bill.status)} and ${open} share${
       open === 1 ? ' is' : 's are'
-    } still open. Ask me to chase someone or tell you where it stands.`;
+    } still open.${own} Ask me to chase someone or tell you where it stands.`;
   }
-  return `${first}, ${label} is ${statusWord(bill.status)} and nothing is outstanding. Ask me to split the next one or walk you through what happened.`;
+  return `${first}, ${label} is ${statusWord(bill.status)} and nothing is outstanding.${own} Ask me to split the next one or walk you through what happened.`;
 }
 
 /**
